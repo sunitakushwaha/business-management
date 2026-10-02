@@ -54,6 +54,7 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/employees') ||
     request.nextUrl.pathname.startsWith('/customers') ||
     request.nextUrl.pathname.startsWith('/reports') ||
+    request.nextUrl.pathname.startsWith('/forecast') ||
     request.nextUrl.pathname.startsWith('/assistant');
 
   if (!user && isProtectedPage) {

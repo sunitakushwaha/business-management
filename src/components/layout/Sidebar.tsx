@@ -12,6 +12,7 @@ import {
   UserCheck,
   FileBarChart,
   Bot,
+  Compass,
   LogOut,
   Building2,
 } from 'lucide-react';
@@ -32,6 +33,7 @@ const navItems = [
   { name: 'Customers', href: '/customers', icon: Users },
   { name: 'Employees', href: '/employees', icon: UserCheck },
   { name: 'Reports', href: '/reports', icon: FileBarChart },
+  { name: 'Forecast', href: '/forecast', icon: Compass },
   { name: 'AI Assistant', href: '/assistant', icon: Bot, badge: 'Groq' },
 ];
 
