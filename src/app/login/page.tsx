@@ -108,15 +108,24 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <div className="mt-5 pt-4 border-t border-slate-800 text-center">
+            <div className="mt-5 pt-4 border-t border-slate-800 text-center space-y-2">
               <p className="text-xs text-slate-400">
-                Demo college mode enabled.{' '}
+                Don&apos;t have an account?{' '}
+                <Link
+                  href="/signup"
+                  className="text-indigo-400 hover:text-indigo-300 font-semibold underline underline-offset-2 ml-1"
+                >
+                  Create one now
+                </Link>
+              </p>
+              <p className="text-[11px] text-slate-500">
+                Or{' '}
                 <button
                   type="button"
                   onClick={() => router.push('/dashboard')}
-                  className="text-indigo-400 hover:text-indigo-300 font-semibold underline underline-offset-2 ml-1"
+                  className="text-slate-400 hover:text-white underline"
                 >
-                  Enter demo directly
+                  explore demo mode directly
                 </button>
               </p>
             </div>

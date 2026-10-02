@@ -61,7 +61,7 @@ Do not guess or fabricate financial figures. Only use the provided metrics.`;
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'llama-3.1-8b-instant',
+        model: 'qwen/qwen3.8-27b',
         messages,
         temperature: 0.2,
         max_tokens: 300,
