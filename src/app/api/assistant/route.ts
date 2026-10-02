@@ -15,10 +15,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Deterministically query business metrics from Supabase
-    let totalSalesCount = 223;
-    let totalRevenue = 156800;
-    let totalExpenses = 48250;
-    let lowStockNames = ['Wireless Barcode Scanner (3 left)', 'Thermal Receipt Rolls (4 left)', 'USB POS Cable (2 left)'];
+    let totalSalesCount = 0;
+    let totalRevenue = 0;
+    let totalExpenses = 0;
+    let lowStockNames: string[] = ['None'];
 
     try {
       const supabase = await createClient();

@@ -1,144 +1,12 @@
 import { createClient } from '@/lib/supabase/client';
 import { Sale, SaleItem, Customer } from '@/types/database';
-import { adjustProductStock, fetchProducts } from './inventory';
+import { adjustProductStock } from './inventory';
 
 export interface SaleWithDetails extends Sale {
   customer?: Customer | null;
   items_count?: number;
   items?: (SaleItem & { product_name?: string })[];
 }
-
-export const fallbackSales: SaleWithDetails[] = [
-  {
-    id: 'ORD-9821',
-    customer_id: '33333333-3333-3333-3333-333333333301',
-    created_by: null,
-    subtotal: 14500,
-    discount: 0,
-    total_amount: 14500,
-    payment_status: 'paid',
-    payment_method: 'upi',
-    created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-    customer: {
-      id: '33333333-3333-3333-3333-333333333301',
-      name: 'Acme Retailers Pvt Ltd',
-      phone: '+91 98765 43210',
-      email: 'orders@acmeretail.com',
-      category: 'high_value',
-      notes: 'Key wholesale buyer',
-      created_at: new Date().toISOString(),
-    },
-    items_count: 3,
-    items: [
-      {
-        id: 'si-1',
-        sale_id: 'ORD-9821',
-        product_id: '22222222-2222-2222-2222-222222222201',
-        product_name: 'Wireless Barcode Scanner',
-        quantity: 2,
-        unit_price: 4500,
-        total: 9000,
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: 'si-2',
-        sale_id: 'ORD-9821',
-        product_id: '22222222-2222-2222-2222-222222222204',
-        product_name: 'Electronic Cash Drawer 24V',
-        quantity: 1,
-        unit_price: 3200,
-        total: 3200,
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: 'si-3',
-        sale_id: 'ORD-9821',
-        product_id: '22222222-2222-2222-2222-222222222205',
-        product_name: 'Thermal Desktop Label Printer',
-        quantity: 1,
-        unit_price: 2300,
-        total: 2300,
-        created_at: new Date().toISOString(),
-      },
-    ],
-  },
-  {
-    id: 'ORD-9820',
-    customer_id: '33333333-3333-3333-3333-333333333302',
-    created_by: null,
-    subtotal: 3200,
-    discount: 0,
-    total_amount: 3200,
-    payment_status: 'paid',
-    payment_method: 'cash',
-    created_at: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
-    customer: {
-      id: '33333333-3333-3333-3333-333333333302',
-      name: 'Rahul Sharma',
-      phone: '+91 98111 22334',
-      email: 'rahul.s@gmail.com',
-      category: 'regular',
-      notes: null,
-      created_at: new Date().toISOString(),
-    },
-    items_count: 1,
-    items: [
-      {
-        id: 'si-4',
-        sale_id: 'ORD-9820',
-        product_id: '22222222-2222-2222-2222-222222222204',
-        product_name: 'Electronic Cash Drawer 24V',
-        quantity: 1,
-        unit_price: 3200,
-        total: 3200,
-        created_at: new Date().toISOString(),
-      },
-    ],
-  },
-  {
-    id: 'ORD-9819',
-    customer_id: '33333333-3333-3333-3333-333333333303',
-    created_by: null,
-    subtotal: 9400,
-    discount: 500,
-    total_amount: 8900,
-    payment_status: 'pending',
-    payment_method: 'card',
-    created_at: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
-    customer: {
-      id: '33333333-3333-3333-3333-333333333303',
-      name: 'Priya Traders',
-      phone: '+91 97222 33445',
-      email: 'contact@priyatraders.in',
-      category: 'regular',
-      notes: null,
-      created_at: new Date().toISOString(),
-    },
-    items_count: 2,
-    items: [
-      {
-        id: 'si-5',
-        sale_id: 'ORD-9819',
-        product_id: '22222222-2222-2222-2222-222222222201',
-        product_name: 'Wireless Barcode Scanner',
-        quantity: 2,
-        unit_price: 4500,
-        total: 9000,
-        created_at: new Date().toISOString(),
-      },
-      {
-        id: 'si-6',
-        sale_id: 'ORD-9819',
-        product_id: '22222222-2222-2222-2222-222222222203',
-        product_name: 'USB POS Interface Cable',
-        quantity: 1,
-        unit_price: 400,
-        total: 400,
-        created_at: new Date().toISOString(),
-      },
-    ],
-  },
-];
 
 export async function fetchSales(): Promise<SaleWithDetails[]> {
   try {
@@ -148,7 +16,12 @@ export async function fetchSales(): Promise<SaleWithDetails[]> {
       .select('*, customers(*), sale_items(*, products(name))')
       .order('created_at', { ascending: false });
 
-    if (!error && sales && sales.length > 0) {
+    if (error) {
+      console.error('Error fetching sales from Supabase:', error);
+      return [];
+    }
+
+    if (sales) {
       return sales.map((s: any) => ({
         ...s,
         customer: s.customers,
@@ -159,20 +32,11 @@ export async function fetchSales(): Promise<SaleWithDetails[]> {
         })),
       }));
     }
+    return [];
   } catch (err) {
     console.error('Error fetching sales from Supabase:', err);
+    return [];
   }
-
-  if (typeof window !== 'undefined') {
-    const local = localStorage.getItem('biz_sales');
-    if (local) {
-      try {
-        return JSON.parse(local);
-      } catch {}
-    }
-  }
-
-  return fallbackSales;
 }
 
 export async function createSaleTransaction(
@@ -193,88 +57,82 @@ export async function createSaleTransaction(
   }[]
 ): Promise<SaleWithDetails> {
   const supabase = createClient();
-  const saleId = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
 
-  // 1. Deduct Inventory stock for all items
+  // 1. Insert into Supabase sales table
+  const { data: createdSale, error: saleErr } = await supabase
+    .from('sales')
+    .insert({
+      customer_id: saleData.customer_id,
+      subtotal: saleData.subtotal,
+      discount: saleData.discount,
+      total_amount: saleData.total_amount,
+      payment_method: saleData.payment_method,
+      payment_status: saleData.payment_status,
+    })
+    .select('*, customers(*)')
+    .single();
+
+  if (saleErr || !createdSale) {
+    console.error('Error recording sale in Supabase:', saleErr);
+    throw new Error(saleErr?.message || 'Failed to create sale in database');
+  }
+
+  // 2. Insert items into sale_items table
+  if (items.length > 0) {
+    const itemsToInsert = items.map((it) => ({
+      sale_id: createdSale.id,
+      product_id: it.product_id,
+      quantity: it.quantity,
+      unit_price: it.unit_price,
+      total: it.total,
+    }));
+
+    const { error: itemsErr } = await supabase
+      .from('sale_items')
+      .insert(itemsToInsert);
+
+    if (itemsErr) {
+      console.error('Error recording sale items in Supabase:', itemsErr);
+    }
+  }
+
+  // 3. Deduct stock for each sold product
   for (const item of items) {
     await adjustProductStock(
       item.product_id,
       'stock_out',
       item.quantity,
-      `Sale Invoice #${saleId}`
+      `Sale Invoice #${createdSale.id.slice(0, 8)}`
     );
   }
 
-  // 2. Save in Supabase
-  try {
-    const { data: createdSale, error: saleErr } = await supabase
-      .from('sales')
-      .insert({
-        customer_id: saleData.customer_id,
-        subtotal: saleData.subtotal,
-        discount: saleData.discount,
-        total_amount: saleData.total_amount,
-        payment_method: saleData.payment_method,
-        payment_status: saleData.payment_status,
-      })
-      .select()
-      .single();
-
-    if (!saleErr && createdSale) {
-      // Insert sale items
-      await supabase.from('sale_items').insert(
-        items.map((it) => ({
-          sale_id: createdSale.id,
-          product_id: it.product_id,
-          quantity: it.quantity,
-          unit_price: it.unit_price,
-          total: it.total,
-        }))
-      );
-
-      // Record income if paid
-      if (saleData.payment_status === 'paid') {
-        await supabase.from('income').insert({
-          category: 'Product Sales',
-          amount: saleData.total_amount,
-          description: `Sale Order #${saleId}`,
-          date: new Date().toISOString().split('T')[0],
-        });
-      }
+  // 4. Record income in finance ledger if paid
+  if (saleData.payment_status === 'paid') {
+    try {
+      await supabase.from('income').insert({
+        category: 'Sales',
+        amount: saleData.total_amount,
+        description: `POS Sale Receipt #${createdSale.id.slice(0, 8)}`,
+        date: new Date().toISOString().split('T')[0],
+      });
+    } catch (fErr) {
+      console.warn('Could not auto-log income entry for sale:', fErr);
     }
-  } catch (err) {
-    console.error('Supabase sale insert error:', err);
   }
 
-  // 3. Update local state
-  const newSale: SaleWithDetails = {
-    id: saleId,
-    customer_id: saleData.customer_id,
-    created_by: null,
-    subtotal: saleData.subtotal,
-    discount: saleData.discount,
-    total_amount: saleData.total_amount,
-    payment_status: saleData.payment_status,
-    payment_method: saleData.payment_method,
-    created_at: new Date().toISOString(),
+  return {
+    ...createdSale,
+    customer: createdSale.customers,
     items_count: items.length,
     items: items.map((it, idx) => ({
-      id: `si-${Date.now()}-${idx}`,
-      sale_id: saleId,
+      id: `si-${idx}`,
+      sale_id: createdSale.id,
       product_id: it.product_id,
-      product_name: it.product_name,
       quantity: it.quantity,
       unit_price: it.unit_price,
       total: it.total,
       created_at: new Date().toISOString(),
+      product_name: it.product_name,
     })),
   };
-
-  const existingSales = await fetchSales();
-  const updated = [newSale, ...existingSales];
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('biz_sales', JSON.stringify(updated));
-  }
-
-  return newSale;
 }

@@ -12,6 +12,7 @@ import { InvoiceModal } from '@/components/sales/InvoiceModal';
 import { fetchSales, createSaleTransaction, SaleWithDetails } from '@/lib/services/sales';
 import { fetchProducts } from '@/lib/services/inventory';
 import { createClient } from '@/lib/supabase/client';
+import { fetchCustomers } from '@/lib/services/crm';
 import { Product, Customer } from '@/types/database';
 import {
   Plus,
@@ -40,30 +41,14 @@ export default function SalesPage() {
   useEffect(() => {
     async function loadData() {
       setIsLoading(true);
-      const [salesData, prodsData] = await Promise.all([
+      const [salesData, prodsData, custData] = await Promise.all([
         fetchSales(),
         fetchProducts(),
+        fetchCustomers(),
       ]);
       setSales(salesData);
       setProducts(prodsData);
-
-      // Load customers
-      try {
-        const supabase = createClient();
-        const { data: custData } = await supabase.from('customers').select('*');
-        if (custData && custData.length > 0) {
-          setCustomers(custData);
-        } else {
-          setCustomers([
-            { id: '33333333-3333-3333-3333-333333333301', name: 'Acme Retailers Pvt Ltd', phone: '+91 98765 43210', email: 'orders@acmeretail.com', category: 'high_value', notes: null, created_at: '' },
-            { id: '33333333-3333-3333-3333-333333333302', name: 'Rahul Sharma', phone: '+91 98111 22334', email: 'rahul.s@gmail.com', category: 'regular', notes: null, created_at: '' },
-            { id: '33333333-3333-3333-3333-333333333303', name: 'Priya Traders', phone: '+91 97222 33445', email: 'contact@priyatraders.in', category: 'regular', notes: null, created_at: '' },
-          ]);
-        }
-      } catch {
-        // Fallback
-      }
-
+      setCustomers(custData);
       setIsLoading(false);
     }
     loadData();

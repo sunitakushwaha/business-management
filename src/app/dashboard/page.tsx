@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   ArrowRight,
   Sparkles,
+  Package,
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -52,13 +53,13 @@ export default function DashboardPage() {
     loadDashboardData();
   }, []);
 
-  // Deterministic KPI aggregations
+  // Deterministic KPI aggregations based exclusively on database records
   const metrics = useMemo(() => {
-    const totalSalesRev = sales.reduce((acc, s) => acc + s.total_amount, 0);
+    const totalSalesRev = sales.reduce((acc, s) => acc + (Number(s.total_amount) || 0), 0);
     const totalOrders = sales.length;
     const totalExpenses = finance
       .filter((f) => f.type === 'expense')
-      .reduce((acc, f) => acc + f.amount, 0);
+      .reduce((acc, f) => acc + (Number(f.amount) || 0), 0);
 
     const netProfit = totalSalesRev - totalExpenses;
     const lowStockItems = products.filter((p) => p.stock_quantity <= p.minimum_stock);
@@ -66,37 +67,79 @@ export default function DashboardPage() {
     return { totalSalesRev, totalOrders, totalExpenses, netProfit, lowStockItems };
   }, [products, sales, finance]);
 
-  // Chart data from sales
-  const chartData = useMemo(() => {
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const buckets: { [key: string]: { revenue: number; sales: number } } = {
-      Mon: { revenue: 0, sales: 0 },
-      Tue: { revenue: 0, sales: 0 },
-      Wed: { revenue: 0, sales: 0 },
-      Thu: { revenue: 0, sales: 0 },
-      Fri: { revenue: 0, sales: 0 },
-      Sat: { revenue: 0, sales: 0 },
-      Sun: { revenue: 0, sales: 0 },
+  // Dynamic revenue trend (past 7 days vs previous 7 days)
+  const revenueTrend = useMemo(() => {
+    const now = Date.now();
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
+
+    const currentPeriodRev = sales
+      .filter((s) => now - new Date(s.created_at).getTime() <= sevenDaysMs)
+      .reduce((acc, s) => acc + (Number(s.total_amount) || 0), 0);
+
+    const prevPeriodRev = sales
+      .filter((s) => {
+        const age = now - new Date(s.created_at).getTime();
+        return age > sevenDaysMs && age <= fourteenDaysMs;
+      })
+      .reduce((acc, s) => acc + (Number(s.total_amount) || 0), 0);
+
+    if (prevPeriodRev === 0 && currentPeriodRev > 0) {
+      return { value: '+100% this week', isPositive: true };
+    }
+    if (prevPeriodRev === 0 && currentPeriodRev === 0) {
+      return { value: '0% change', isPositive: true };
+    }
+    const diff = ((currentPeriodRev - prevPeriodRev) / prevPeriodRev) * 100;
+    return {
+      value: `${diff >= 0 ? '+' : ''}${diff.toFixed(1)}% vs last week`,
+      isPositive: diff >= 0,
     };
+  }, [sales]);
 
-    sales.forEach((s) => {
-      const d = new Date(s.created_at);
-      const dayName = days[d.getDay()];
-      if (buckets[dayName]) {
-        buckets[dayName].revenue += s.total_amount;
-        buckets[dayName].sales += 1;
-      }
-    });
+  // Today's orders count
+  const ordersTrend = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const todayCount = sales.filter(
+      (s) => new Date(s.created_at).toISOString().split('T')[0] === today
+    ).length;
+    return {
+      value: `${todayCount} placed today`,
+      isPositive: true,
+    };
+  }, [sales]);
 
-    return [
-      { day: 'Mon', revenue: buckets['Mon'].revenue || 12400, sales: buckets['Mon'].sales || 18 },
-      { day: 'Tue', revenue: buckets['Tue'].revenue || 18200, sales: buckets['Tue'].sales || 26 },
-      { day: 'Wed', revenue: buckets['Wed'].revenue || 15800, sales: buckets['Wed'].sales || 22 },
-      { day: 'Thu', revenue: buckets['Thu'].revenue || 24500, sales: buckets['Thu'].sales || 34 },
-      { day: 'Fri', revenue: buckets['Fri'].revenue || 28900, sales: buckets['Fri'].sales || 41 },
-      { day: 'Sat', revenue: buckets['Sat'].revenue || 35400, sales: buckets['Sat'].sales || 52 },
-      { day: 'Sun', revenue: buckets['Sun'].revenue || 21600, sales: buckets['Sun'].sales || 30 },
-    ];
+  // Expenses entry count
+  const expenseCount = useMemo(() => {
+    return finance.filter((f) => f.type === 'expense').length;
+  }, [finance]);
+
+  // Chart data strictly from actual database sales for the last 7 calendar days
+  const chartData = useMemo(() => {
+    const result = [];
+    const now = new Date();
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dayLabel = d.toLocaleDateString('en-US', { weekday: 'short' });
+      const dateStr = d.toISOString().split('T')[0];
+
+      const daySales = sales.filter((s) => {
+        const sDate = new Date(s.created_at).toISOString().split('T')[0];
+        return sDate === dateStr;
+      });
+
+      const rev = daySales.reduce((acc, s) => acc + (Number(s.total_amount) || 0), 0);
+      result.push({
+        day: dayLabel,
+        date: dateStr,
+        revenue: rev,
+        sales: daySales.length,
+      });
+    }
+
+    return result;
   }, [sales]);
 
   return (
@@ -108,13 +151,13 @@ export default function DashboardPage() {
             <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-500/30 border border-emerald-400/40 text-emerald-200">
               Live Operations
             </span>
-            <span className="text-xs text-indigo-200">All Modules Integrated</span>
+            <span className="text-xs text-indigo-200">Database Connected</span>
           </div>
           <h2 className="text-lg font-bold mt-1 text-white">
             BizManage Central Operations
           </h2>
           <p className="text-xs text-indigo-200 max-w-xl mt-0.5">
-            Deterministic business accounting with live Groq AI natural-language assistant.
+            Real-time deterministic business telemetry connected to live PostgreSQL tables.
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -138,23 +181,23 @@ export default function DashboardPage() {
         <StatCard
           title="Total Revenue"
           value={`₹${metrics.totalSalesRev.toLocaleString()}`}
-          description="Authoritative sales volume"
+          description={`${metrics.totalOrders} paid / recorded sales`}
           icon={<DollarSign className="w-5 h-5" />}
-          trend={{ value: '+14.2%', isPositive: true }}
+          trend={revenueTrend}
         />
         <StatCard
           title="Total Sales Orders"
-          value={`${metrics.totalOrders} Transactions`}
+          value={`${metrics.totalOrders} Orders`}
           description="Recorded client purchases"
           icon={<ShoppingCart className="w-5 h-5" />}
-          trend={{ value: 'Active pipeline', isPositive: true }}
+          trend={ordersTrend}
         />
         <StatCard
           title="Operating Expenses"
           value={`₹${metrics.totalExpenses.toLocaleString()}`}
           description="Supplies & operational overhead"
           icon={<TrendingDown className="w-5 h-5 text-rose-500" />}
-          trend={{ value: 'Tracked in ledger', isPositive: false }}
+          trend={{ value: `${expenseCount} ledger entries`, isPositive: false }}
         />
         <StatCard
           title="Net Profit (Calculated)"
@@ -176,9 +219,9 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Weekly Revenue Performance</CardTitle>
-                <CardDescription>Deterministic sales trend across current operational cycle</CardDescription>
+                <CardDescription>Live revenue distribution across the last 7 calendar days</CardDescription>
               </div>
-              <Badge variant="info">7 Days</Badge>
+              <Badge variant="info">Last 7 Days</Badge>
             </div>
           </CardHeader>
           <CardContent>
@@ -209,6 +252,11 @@ export default function DashboardPage() {
                 </AreaChart>
               </ResponsiveContainer>
             </div>
+            {metrics.totalSalesRev === 0 && (
+              <p className="text-center text-xs text-slate-400 mt-2">
+                No sales recorded in the past 7 days. Completed POS sales will graph here in real-time.
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -218,9 +266,11 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Low Stock Alerts</CardTitle>
-                <CardDescription>Items below reorder threshold</CardDescription>
+                <CardDescription>Items at or below reorder threshold</CardDescription>
               </div>
-              <Badge variant="warning">{metrics.lowStockItems.length} Items</Badge>
+              <Badge variant={metrics.lowStockItems.length > 0 ? 'warning' : 'neutral'}>
+                {metrics.lowStockItems.length} Items
+              </Badge>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -242,7 +292,13 @@ export default function DashboardPage() {
                   </div>
                 </div>
               ))}
-              {metrics.lowStockItems.length === 0 && (
+              {products.length === 0 && (
+                <div className="p-8 text-center text-xs text-slate-400">
+                  <Package className="w-6 h-6 mx-auto mb-2 text-slate-300" />
+                  No inventory items found. Add products in Inventory to track stock thresholds.
+                </div>
+              )}
+              {products.length > 0 && metrics.lowStockItems.length === 0 && (
                 <div className="p-8 text-center text-xs text-slate-400">
                   All inventory items are currently above threshold levels.
                 </div>
@@ -263,7 +319,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Recent Sales Transactions</CardTitle>
-              <CardDescription>Live transactions recorded in database</CardDescription>
+              <CardDescription>Live transactions recorded in Supabase database</CardDescription>
             </div>
             <Link href="/sales">
               <Button variant="outline" size="sm">
@@ -273,46 +329,63 @@ export default function DashboardPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/75 dark:bg-slate-800/40 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
-                  <th className="px-5 py-3">Order ID</th>
-                  <th className="px-5 py-3">Customer</th>
-                  <th className="px-5 py-3">Amount</th>
-                  <th className="px-5 py-3">Payment Method</th>
-                  <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3 text-right">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
-                {sales.slice(0, 5).map((sale) => (
-                  <tr key={sale.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                    <td className="px-5 py-3.5 font-medium text-slate-900 dark:text-slate-100 font-mono">
-                      {sale.id}
-                    </td>
-                    <td className="px-5 py-3.5 text-slate-700 dark:text-slate-300">
-                      {sale.customer ? sale.customer.name : 'Walk-in Customer'}
-                    </td>
-                    <td className="px-5 py-3.5 font-bold text-slate-900 dark:text-white">
-                      ₹{sale.total_amount.toLocaleString()}
-                    </td>
-                    <td className="px-5 py-3.5 uppercase text-xs text-slate-600 dark:text-slate-400">
-                      {sale.payment_method}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <Badge variant={sale.payment_status === 'paid' ? 'success' : 'warning'}>
-                        {sale.payment_status}
-                      </Badge>
-                    </td>
-                    <td className="px-5 py-3.5 text-right text-xs text-slate-400">
-                      {new Date(sale.created_at).toLocaleDateString()}
-                    </td>
+          {sales.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/75 dark:bg-slate-800/40 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
+                    <th className="px-5 py-3">Order ID</th>
+                    <th className="px-5 py-3">Customer</th>
+                    <th className="px-5 py-3">Amount</th>
+                    <th className="px-5 py-3">Payment Method</th>
+                    <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3 text-right">Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
+                  {sales.slice(0, 5).map((sale) => (
+                    <tr key={sale.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                      <td className="px-5 py-3.5 font-medium text-slate-900 dark:text-slate-100 font-mono text-xs">
+                        {sale.id.slice(0, 8)}...
+                      </td>
+                      <td className="px-5 py-3.5 text-slate-700 dark:text-slate-300">
+                        {sale.customer ? sale.customer.name : 'Walk-in Customer'}
+                      </td>
+                      <td className="px-5 py-3.5 font-bold text-slate-900 dark:text-white">
+                        ₹{(Number(sale.total_amount) || 0).toLocaleString()}
+                      </td>
+                      <td className="px-5 py-3.5 uppercase text-xs text-slate-600 dark:text-slate-400">
+                        {sale.payment_method}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <Badge variant={sale.payment_status === 'paid' ? 'success' : 'warning'}>
+                          {sale.payment_status}
+                        </Badge>
+                      </td>
+                      <td className="px-5 py-3.5 text-right text-xs text-slate-400">
+                        {new Date(sale.created_at).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="py-12 px-4 text-center">
+              <ShoppingCart className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                No Sales Transactions Recorded Yet
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
+                Completed sales from the POS terminal will appear here automatically from your live database.
+              </p>
+              <div className="mt-4">
+                <Link href="/sales">
+                  <Button size="sm">Record First Sale</Button>
+                </Link>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </AppShell>
