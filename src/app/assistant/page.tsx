@@ -5,7 +5,7 @@ import { AppShell } from '@/components/layout/AppShell';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { Bot, Send, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Bot, Send, Sparkles, CheckCircle2 } from 'lucide-react';
 
 interface ChatMessage {
   id: string;
@@ -130,12 +130,6 @@ export default function AssistantPage() {
                   }`}
                 >
                   <p className="whitespace-pre-line leading-relaxed">{msg.text}</p>
-                  {msg.isMock && (
-                    <span className="inline-flex items-center gap-1 mt-2 text-[10px] text-amber-500 font-medium">
-                      <AlertCircle className="w-3 h-3" />
-                      Mock Demo Mode (AI_MOCK_MODE)
-                    </span>
-                  )}
                 </div>
               </div>
             ))}

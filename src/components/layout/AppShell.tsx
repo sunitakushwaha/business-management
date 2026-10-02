@@ -18,7 +18,7 @@ export function AppShell({
   children,
   title = 'Dashboard',
   userRole: initialRole = 'Owner',
-  userName: initialName = 'Demo User',
+  userName: initialName = 'Business Owner',
 }: AppShellProps) {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);

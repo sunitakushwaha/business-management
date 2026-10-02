@@ -108,7 +108,7 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <div className="mt-5 pt-4 border-t border-slate-800 text-center space-y-2">
+            <div className="mt-5 pt-4 border-t border-slate-800 text-center">
               <p className="text-xs text-slate-400">
                 Don&apos;t have an account?{' '}
                 <Link
@@ -117,16 +117,6 @@ export default function LoginPage() {
                 >
                   Create one now
                 </Link>
-              </p>
-              <p className="text-[11px] text-slate-500">
-                Or{' '}
-                <button
-                  type="button"
-                  onClick={() => router.push('/dashboard')}
-                  className="text-slate-400 hover:text-white underline"
-                >
-                  explore demo mode directly
-                </button>
               </p>
             </div>
           </CardContent>
