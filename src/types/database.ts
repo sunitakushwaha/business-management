@@ -137,57 +137,71 @@ export interface Database {
         Row: Profile;
         Insert: Omit<Profile, 'created_at' | 'updated_at'> & { created_at?: string; updated_at?: string };
         Update: Partial<Omit<Profile, 'id'>>;
+        Relationships: [];
       };
       products: {
         Row: Product;
         Insert: Omit<Product, 'id' | 'created_at' | 'updated_at'> & { id?: string; created_at?: string; updated_at?: string };
         Update: Partial<Omit<Product, 'id'>>;
+        Relationships: [];
       };
       suppliers: {
         Row: Supplier;
         Insert: Omit<Supplier, 'id' | 'created_at'> & { id?: string; created_at?: string };
         Update: Partial<Omit<Supplier, 'id'>>;
+        Relationships: [];
       };
       customers: {
         Row: Customer;
         Insert: Omit<Customer, 'id' | 'created_at'> & { id?: string; created_at?: string };
         Update: Partial<Omit<Customer, 'id'>>;
+        Relationships: [];
       };
       employees: {
         Row: Employee;
         Insert: Omit<Employee, 'id' | 'created_at'> & { id?: string; created_at?: string };
         Update: Partial<Omit<Employee, 'id'>>;
+        Relationships: [];
       };
       attendance: {
         Row: Attendance;
         Insert: Omit<Attendance, 'id' | 'created_at'> & { id?: string; created_at?: string };
         Update: Partial<Omit<Attendance, 'id'>>;
+        Relationships: [];
       };
       sales: {
         Row: Sale;
         Insert: Omit<Sale, 'id' | 'created_at'> & { id?: string; created_at?: string };
         Update: Partial<Omit<Sale, 'id'>>;
+        Relationships: [];
       };
       sale_items: {
         Row: SaleItem;
         Insert: Omit<SaleItem, 'id' | 'created_at'> & { id?: string; created_at?: string };
         Update: Partial<Omit<SaleItem, 'id'>>;
+        Relationships: [];
       };
       income: {
         Row: Income;
         Insert: Omit<Income, 'id' | 'created_at'> & { id?: string; created_at?: string };
         Update: Partial<Omit<Income, 'id'>>;
+        Relationships: [];
       };
       expenses: {
         Row: Expense;
         Insert: Omit<Expense, 'id' | 'created_at'> & { id?: string; created_at?: string };
         Update: Partial<Omit<Expense, 'id'>>;
+        Relationships: [];
       };
       stock_movements: {
         Row: StockMovement;
         Insert: Omit<StockMovement, 'id' | 'created_at'> & { id?: string; created_at?: string };
         Update: Partial<Omit<StockMovement, 'id'>>;
+        Relationships: [];
       };
     };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
   };
 }
